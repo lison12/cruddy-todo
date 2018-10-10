@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const sprintf = require('sprintf-js').sprintf;
+const Promise = require('bluebird');
 
 var counter = 0;
 
@@ -35,6 +36,10 @@ const writeCounter = (count, callback) => {
     }
   });
 };
+
+const readCounterAsync = Promise.promisify(readCounter);
+const writeCounterAsync = Promise.promisify(writeCounter);
+
 
 // Public API - Fix this function //////////////////////////////////////////////
 

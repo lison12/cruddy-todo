@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('underscore');
 const counter = require('./counter');
+var Promise = require('bluebird');
+var readdirAsync = Promise.promisify(fs.readdir);
+var readFileAsync = Promise.promisify(fs.readFile);
 
 
 // Public API - Fix these CRUD functions ///////////////////////////////////////
@@ -21,24 +24,53 @@ exports.create = (text, callback) => {
   // callback(null, { id, text });
 };
 
+// Callback way
+// exports.readAll = (callback) => {
+//   // var data = [];
+//   let directory = `${exports.dataDir}`;
+//   fs.readdir(directory, (err, data) => {
+//     if (err) {
+//       callback(err);
+//     } else {
+//       var dataOfObj = data.map(name => ({
+//         'id': name.slice(0, 5),
+//         'text': name.slice(0, 5),
+//       }));
+//       callback(null, dataOfObj);
+//     }
+//   });
+// };
+
+
+// Using Promise
 exports.readAll = (callback) => {
-  // var data = [];
-  let directory = `${exports.dataDir}`;
-  fs.readdir(directory, (err, data) => {
-    if (err) {
-      callback(err);
-    } else {
-      var dataOfObj = data.map(name => ({
-        'id': name.slice(0, 5),
-        'text': name.slice(0, 5),
-      }));
-      callback(null, dataOfObj);
-    }
-  });
+  // use the promisified readdir to read through the directory -> a list of names of files inside the dir
+  // on data array, we map each file's name to readFile and convert the list of names of files into the list of buffers of the files -> then make into an object containing id as title, and contents as text
+  // buffers -> 
+  return readdirAsync(exports.dataDir)
+    .then((names) => {
+      var data = names.map((name) => {
+        let filepath = path.join(exports.dataDir, name);
+        return readFileAsync(filepath)
+          .then((buffer) => {
+            return {
+              'id': name.slice(0, 5),
+              'text': buffer.toString()
+            };
+          });
+      });
+      Promise.all(data)
+        .then((files) => {
+          callback(null, files);
+        });
+    });
+
 };
 
+
+
 exports.readOne = (id, callback) => {
-  let directory = `${exports.dataDir}/${id}.txt`;
+  let directory = path.join(exports.dataDir, `${id}.txt`);
   fs.readFile(directory, (err, data) => {
     if (err) {
       callback(err);
